@@ -1,8 +1,24 @@
 # Pi Provider Manager
 
+[![npm version](https://img.shields.io/npm/v/%402tle%2Fpi-provider-manager)](https://www.npmjs.com/package/@2tle/pi-provider-manager)
+
 An extension for registering and managing OpenAI-compatible API providers in Pi Agent.
 
 When working with local LLM servers, private gateways, proxies, or hosted APIs, managing each provider through `models.json` and restarting Pi can be cumbersome. This extension keeps managed providers and their model catalogs in one place.
+
+## Installation
+
+Install the package from [npm](https://www.npmjs.com/package/@2tle/pi-provider-manager) and register it with Pi:
+
+```bash
+pi install npm:@2tle/pi-provider-manager
+```
+
+To try it without adding it to your settings:
+
+```bash
+pi -e npm:@2tle/pi-provider-manager
+```
 
 ## Features
 
