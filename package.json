@@ -1,0 +1,16 @@
+{
+  "name": "pi-provider-manager",
+  "version": "0.1.0",
+  "description": "Manage OpenAI-compatible providers and model catalogs in Pi Agent",
+  "license": "Apache-2.0",
+  "type": "module",
+  "keywords": ["pi-package"],
+  "pi": {
+    "extensions": ["./index.ts"]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  }
+}
