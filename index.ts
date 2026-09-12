@@ -11,6 +11,8 @@ const API = "openai-completions" as const;
 const DEFAULT_CONTEXT_WINDOW = 128_000;
 const DEFAULT_MAX_TOKENS = 16_384;
 const REFRESH_TIMEOUT_MS = 30_000;
+const PI_THINKING_LEVELS = ["minimal", "low", "medium", "high", "xhigh", "max"] as const;
+type PiThinkingLevel = (typeof PI_THINKING_LEVELS)[number];
 
 interface StoredProvider {
 	id: string;
@@ -31,6 +33,10 @@ interface ProviderModelConfig {
 	name: string;
 	api: typeof API;
 	reasoning: boolean;
+	thinkingLevelMap?: Partial<Record<PiThinkingLevel, string | null>>;
+	compat?: {
+		supportsReasoningEffort: boolean;
+	};
 	input: ("text" | "image")[];
 	cost: {
 		input: number;
@@ -60,8 +66,11 @@ interface OpenAIModelPayload {
 	maxTokens?: unknown;
 	reasoning?: unknown;
 	supports_reasoning?: unknown;
+	supports_reasoning_effort?: unknown;
+	reasoning_efforts?: unknown;
 	input?: unknown;
 	cost?: unknown;
+	capabilities?: unknown;
 }
 
 interface OpenAIModelsPayload {
@@ -78,6 +87,27 @@ function asNonEmptyString(value: unknown): string | undefined {
 
 function asPositiveNumber(value: unknown, fallback: number): number {
 	return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function getReasoningEfforts(value: unknown): Set<string> {
+	if (!Array.isArray(value)) return new Set();
+	return new Set(value.flatMap((item) => {
+		if (typeof item === "string") return [item.toLowerCase()];
+		const effort = asNonEmptyString(asRecord(item)?.value);
+		return effort ? [effort.toLowerCase()] : [];
+	}));
+}
+
+function thinkingLevelMap(efforts: Set<string>): Partial<Record<PiThinkingLevel, string | null>> | undefined {
+	if (efforts.size === 0) return undefined;
+
+	const map: Partial<Record<PiThinkingLevel, string | null>> = {};
+	for (const level of PI_THINKING_LEVELS) {
+		if (efforts.has(level)) map[level] = level;
+		else if (level === "max" && efforts.has("ultra")) map[level] = "ultra";
+		else map[level] = null;
+	}
+	return map;
 }
 
 function normalizeBaseUrl(value: string): string {
@@ -182,15 +212,30 @@ function modelFromPayload(
 	const id = asNonEmptyString(payload.id);
 	if (!id) return undefined;
 
+	const capabilities = asRecord(payload.capabilities);
 	const cost = asRecord(payload.cost);
+	const inputModalities = Array.isArray(payload.input)
+		? payload.input
+		: capabilities?.input_modalities;
 	const input: ("text" | "image")[] =
-		Array.isArray(payload.input) && payload.input.includes("image") ? ["text", "image"] : ["text"];
+		Array.isArray(inputModalities) && inputModalities.includes("image") ? ["text", "image"] : ["text"];
+	const efforts = getReasoningEfforts(payload.reasoning_efforts ?? capabilities?.reasoning_effort);
+	const reasoning =
+		payload.reasoning === true ||
+		payload.supports_reasoning === true ||
+		payload.supports_reasoning_effort === true ||
+		capabilities?.supports_reasoning === true ||
+		efforts.size > 0;
 
 	return {
 		id,
 		name: asNonEmptyString(payload.name) ?? id,
 		api: API,
-		reasoning: payload.reasoning === true || payload.supports_reasoning === true,
+		reasoning,
+		...(reasoning ? {
+			thinkingLevelMap: thinkingLevelMap(efforts),
+			compat: { supportsReasoningEffort: true },
+		} : {}),
 		input,
 		cost: {
 			input: asPositiveNumber(cost?.input, 0),
@@ -198,8 +243,14 @@ function modelFromPayload(
 			cacheRead: asPositiveNumber(cost?.cacheRead, 0),
 			cacheWrite: asPositiveNumber(cost?.cacheWrite, 0),
 		},
-		contextWindow: asPositiveNumber(payload.context_window ?? payload.contextWindow, DEFAULT_CONTEXT_WINDOW),
-		maxTokens: asPositiveNumber(payload.max_tokens ?? payload.maxTokens, DEFAULT_MAX_TOKENS),
+		contextWindow: asPositiveNumber(
+			payload.context_window ?? payload.contextWindow ?? capabilities?.context_length,
+			DEFAULT_CONTEXT_WINDOW,
+		),
+		maxTokens: asPositiveNumber(
+			payload.max_tokens ?? payload.maxTokens ?? capabilities?.max_output_tokens,
+			DEFAULT_MAX_TOKENS,
+		),
 	};
 }
 

@@ -86,6 +86,24 @@ The extension targets OpenAI Chat Completions-compatible services that provide a
 
 Provider implementations differ in support for developer roles, reasoning options, token fields, and streaming usage. This extension currently uses Pi's standard `openai-completions` transport.
 
+### Thinking / reasoning
+
+During each catalog refresh, the extension recognizes OpenAI-compatible reasoning metadata from either top-level fields or `capabilities`:
+
+- `supports_reasoning`, `supports_reasoning_effort`, or `capabilities.supports_reasoning`
+- `reasoning_efforts` or `capabilities.reasoning_effort` (an array of strings or `{ "value": "..." }` objects)
+
+Reasoning-capable models are registered with Pi's `reasoning_effort` compatibility enabled. Supported effort values are exposed as Pi thinking levels; unavailable levels are hidden. An upstream `ultra` effort is mapped to Pi's highest available level, `max`.
+
+For example, after `/provider reload opencodex`, select a discovered reasoning model with a thinking suffix:
+
+```text
+/provider reload opencodex
+# Then select: opencodex/gpt-5.6-sol:max
+```
+
+An endpoint must actually accept the OpenAI Chat Completions `reasoning_effort` request field. Providers that use a different thinking protocol (for example, Qwen's `enable_thinking`) are outside this extension's OpenAI-compatible transport scope.
+
 ## Stored configuration
 
 Provider metadata and API keys are stored separately:
