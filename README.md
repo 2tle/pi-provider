@@ -25,6 +25,7 @@ pi -e npm:@2tle/pi-provider-manager
 - Add OpenAI-compatible providers from the Pi TUI
 - List managed providers without exposing API keys
 - Edit a provider's display name, Base URL, or API key
+- Override missing or incorrect model context/output limits per provider
 - Refresh one provider's model catalog or every managed catalog
 - Delete a managed provider and its stored API key
 - Keep provider metadata and credentials in separate files
@@ -57,12 +58,51 @@ Displays each provider's ID, display name, Base URL, API key status, and the num
 ### Edit a provider
 
 ```text
-/provider edit <provider_name>
+/provider edit [provider_name]
 ```
+
+With no provider name, an interactive provider picker is shown. The provider editor now includes display name, Base URL, API key, per-model limits, and a guarded action to reset all model overrides.
 
 Use a provider ID (recommended) or a unique display name. Select the fields to change, then choose **Save changes**. The extension refreshes the provider's model catalog after saving.
 
 In TUI mode, API key input is masked with `*` characters. In RPC mode, the connected client is responsible for secret masking.
+
+### Override a model's limits
+
+```text
+/provider model [provider_name] [model_id]
+```
+
+Both arguments are optional. You can select the provider and model interactively, or pass them directly. The model picker displays the effective context/output limits and marks models with saved overrides. Existing override-only model IDs remain selectable even when a refresh no longer returns them.
+
+Choose a model discovered from the provider's catalog (or enter its exact model ID), then set its **context window** and/or **maximum output tokens**. Values accept readable suffixes such as `128k`, `1m`, and `2b`, as well as raw token counts. These values override the API catalog metadata after every refresh. You can clear either field independently, or choose **Remove all overrides for this model** followed by **Save changes** to return to the API-provided value or extension fallback.
+
+This is useful for compatible gateways that omit model metadata. For example, to correct the OpenCodex Go DeepSeek V4.1 catalog row:
+
+```text
+/provider model opencodex
+# select: opencode-go/deepseek-v4.1-flash
+# set its context window to the gateway's documented value
+# Save changes
+```
+
+Overrides are persisted in the provider configuration, keyed by the exact model ID:
+
+```json
+{
+  "providers": [{
+    "id": "opencodex",
+    "name": "opencodex",
+    "baseUrl": "http://127.0.0.1:10100/v1",
+    "modelOverrides": {
+      "opencode-go/deepseek-v4.1-flash": {
+        "contextWindow": 1048576,
+        "maxTokens": 16384
+      }
+    }
+  }]
+}
+```
 
 ### Refresh model catalogs
 
@@ -136,7 +176,8 @@ The first file contains provider IDs, display names, and Base URLs. The second c
 - Provider IDs are stable identifiers. `/provider edit` changes the display name, Base URL, and API key, but does not rename the provider ID.
 - Cancelling the edit menu discards all unsaved changes.
 - Saving an edit persists the new settings first, then refreshes that provider's model catalog. A failed catalog refresh does not discard an otherwise valid saved edit.
-- `/provider list` reports the model count currently loaded in Pi. It can be `0` before a successful refresh.
+- `/provider list` reports the model count currently loaded in Pi and the number of saved model overrides. It can be `0` before a successful refresh.
+- Model overrides take precedence over model-list metadata for `contextWindow` and `maxTokens`; unset fields continue to use the API value or the extension fallback.
 - The extension starts by refreshing every managed provider with a 30-second timeout per refresh operation.
 
 ## Development
