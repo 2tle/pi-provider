@@ -79,4 +79,5 @@ export interface OpenAIModelPayload {
 export interface OpenAIModelsPayload {
 	data?: unknown;
 	models?: unknown;
+	list?: unknown;
 }

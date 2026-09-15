@@ -58,7 +58,8 @@ export function modelFromPayload(provider: StoredProvider, payload: OpenAIModelP
 	const reasoning = payload.reasoning === true || payload.supports_reasoning === true ||
 		payload.supports_reasoning_effort === true || capabilities?.supports_reasoning === true || efforts.size > 0;
 
-	const isCodex = provider.baseUrl.trim().replace(/\/+$/, "").endsWith("/codex");
+	const normalizedBaseUrl = provider.baseUrl.trim().replace(/\/+$/, "");
+	const isCodex = normalizedBaseUrl.endsWith("/codex") || normalizedBaseUrl.endsWith("/codex/responses") || normalizedBaseUrl.endsWith("/backend-api");
 
 	return {
 		id,

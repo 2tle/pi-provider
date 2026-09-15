@@ -111,13 +111,15 @@ Overrides are persisted in the provider configuration, keyed by the exact model 
 /provider reload --all
 ```
 
-The extension sends a request to `<baseUrl>/models` and accepts the OpenAI-style response shape:
+The extension sends an explicit `GET` request to `<baseUrl>/models` and accepts OpenAI-style `data`, plus gateway `models`/Codex `list` response shapes:
 
 ```json
 {
   "data": [{ "id": "model-name" }]
 }
 ```
+
+For a Codex base URL ending in `/codex/responses`, model discovery correctly targets the sibling `/codex/models` resource. Refresh failures include the exact HTTP method, URL, status, and response body so a gateway error is distinguishable from a client-side parsing error.
 
 This is different from Pi's `/reload`, which reloads extension code and resources.
 
@@ -140,7 +142,7 @@ The extension targets OpenAI Chat Completions-compatible services that provide a
 - Ollama's OpenAI-compatible endpoint
 - Private or internal LLM gateways
 
-Provider implementations differ in support for developer roles, reasoning options, token fields, and streaming usage. This extension currently uses Pi's standard `openai-completions` transport.
+Provider implementations differ in support for developer roles, reasoning options, token fields, and streaming usage. This extension uses Pi's standard `openai-completions` transport. A Codex gateway Base URL ending in `/codex`, `/codex/responses`, or `/backend-api` uses the standard `openai-responses` transport, which sends `POST` requests to the gateway's Responses resource. The ChatGPT OAuth-only `openai-codex-responses` transport is intentionally not used because API-key gateways do not provide its JWT account claim.
 
 ### Thinking / reasoning
 
