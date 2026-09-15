@@ -1,6 +1,7 @@
 import type { RefreshModelsContext } from "@earendil-works/pi-ai";
 
 export const API = "openai-completions" as const;
+export const CODEX_API = "openai-responses" as const;
 export const DEFAULT_CONTEXT_WINDOW = 128_000;
 export const DEFAULT_MAX_TOKENS = 16_384;
 export const REFRESH_TIMEOUT_MS = 30_000;
@@ -31,7 +32,7 @@ export interface StoredSecrets {
 export interface ProviderModelConfig {
 	id: string;
 	name: string;
-	api: typeof API;
+	api: typeof API | typeof CODEX_API;
 	reasoning: boolean;
 	thinkingLevelMap?: Partial<Record<PiThinkingLevel, string | null>>;
 	compat?: {
@@ -51,7 +52,7 @@ export interface ProviderModelConfig {
 export interface ManagedProviderConfig {
 	name: string;
 	baseUrl: string;
-	api: typeof API;
+	api: typeof API | typeof CODEX_API;
 	apiKey: string;
 	models: ProviderModelConfig[];
 	refreshModels(context: RefreshModelsContext): Promise<ProviderModelConfig[]>;
@@ -68,11 +69,14 @@ export interface OpenAIModelPayload {
 	supports_reasoning?: unknown;
 	supports_reasoning_effort?: unknown;
 	reasoning_efforts?: unknown;
+	supported_reasoning_levels?: unknown;
 	input?: unknown;
+	input_modalities?: unknown;
 	cost?: unknown;
 	capabilities?: unknown;
 }
 
 export interface OpenAIModelsPayload {
 	data?: unknown;
+	models?: unknown;
 }

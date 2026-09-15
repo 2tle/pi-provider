@@ -1,5 +1,6 @@
 import {
 	API,
+	CODEX_API,
 	DEFAULT_CONTEXT_WINDOW,
 	DEFAULT_MAX_TOKENS,
 	PI_THINKING_LEVELS,
@@ -25,7 +26,8 @@ function getReasoningEfforts(value: unknown): Set<string> {
 	if (!Array.isArray(value)) return new Set();
 	return new Set(value.flatMap((item) => {
 		if (typeof item === "string") return [item.toLowerCase()];
-		const effort = asNonEmptyString(asRecord(item)?.value);
+		const record = asRecord(item);
+		const effort = asNonEmptyString(record?.value ?? record?.effort);
 		return effort ? [effort.toLowerCase()] : [];
 	}));
 }
@@ -48,18 +50,20 @@ export function modelFromPayload(provider: StoredProvider, payload: OpenAIModelP
 	const override = provider.modelOverrides?.[id];
 	const capabilities = asRecord(payload.capabilities);
 	const cost = asRecord(payload.cost);
-	const inputModalities = Array.isArray(payload.input) ? payload.input : capabilities?.input_modalities;
+	const inputModalities = Array.isArray(payload.input) ? payload.input : payload.input_modalities ?? capabilities?.input_modalities;
 	const input: ("text" | "image")[] = Array.isArray(inputModalities) && inputModalities.includes("image")
 		? ["text", "image"]
 		: ["text"];
-	const efforts = getReasoningEfforts(payload.reasoning_efforts ?? capabilities?.reasoning_effort);
+	const efforts = getReasoningEfforts(payload.reasoning_efforts ?? payload.supported_reasoning_levels ?? capabilities?.reasoning_effort);
 	const reasoning = payload.reasoning === true || payload.supports_reasoning === true ||
 		payload.supports_reasoning_effort === true || capabilities?.supports_reasoning === true || efforts.size > 0;
+
+	const isCodex = provider.baseUrl.trim().replace(/\/+$/, "").endsWith("/codex");
 
 	return {
 		id,
 		name: asNonEmptyString(payload.name) ?? id,
-		api: API,
+		api: isCodex ? CODEX_API : API,
 		reasoning,
 		...(reasoning ? { thinkingLevelMap: thinkingLevelMap(efforts), compat: { supportsReasoningEffort: true } } : {}),
 		input,
