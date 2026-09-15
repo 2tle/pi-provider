@@ -1,6 +1,6 @@
 {
   "name": "@2tle/pi-provider-manager",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Manage OpenAI-compatible providers and model catalogs in Pi Agent",
   "license": "Apache-2.0",
   "type": "module",
